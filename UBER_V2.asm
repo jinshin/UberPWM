@@ -15,28 +15,19 @@ int08_handler:
 		;Disconnect from channel 2
                 out     61h,al
 
-		;new values are loaded every second call
-                ;xor     dl,dh
-                ;jnz     short load_next_byte
-
-		;increase pointer, decrease counter
-                mov	ah,[bx]
-
-		;mov	al,ah
-		;shr	al,1
-		;out	42h,al
+		;load value increase pointer, decrease counter
+                mov	al,[bx]
 
 		inc	bx
 		dec	bp
                 jz      short terminate
 
-                mov     al,ch  ;20h always
-		;Notice AX out here
-		;Changing to AL makes noise worse
-                out     41h,ax
+	        ;out     41h,ax
 
+		out	42h,al
+		mov	al,ch
 
-		;Signal EOI
+		;Signal EOI		
                 out     20h,al
 		;avoid stack overflow
         	add	sp,si
@@ -139,12 +130,6 @@ start:
 		or	al,2
 		out	61h,al
 
-;Channel 1, MSB only, Interrupt on count, trigger irq every time
- 		
-		mov	al,50h
-		;01 01 000 0
-		out	43h,al
-
 		mov	al,0ah ;?
 		out	20h,al
 
@@ -173,23 +158,23 @@ waveend:
 
 
 ;43H  Write: set channel's mode of operation
-;      ã7T6T5T4T3T2T1T0¬
-;      ¦ch#¦r/l¦mode ¦ ¦
+;      Ã£7T6T5T4T3T2T1T0Â¬
+;      Â¦ch#Â¦r/lÂ¦mode Â¦ Â¦
 ;      L-+-+-+-+-+-+-+T- bits mask
 ;       LT- LT- L-T-- L=>  0: 01H 0=process count as binary
-;        ¦   ¦    ¦               1=process counts as BCD^
-;        ¦   ¦    L=====>1-3: 0eH select timer mode:
-;        ¦   ¦                    000 = mode 0: interrupt on terminal count
-;        ¦   ¦                    001 = mode 1: programmable one-shot
-;        ¦   ¦                    x10 = mode 2: rate generator
-;        ¦   ¦                    x11 = mode 3: square-wave rate generator
-;        ¦   ¦                    100 = mode 4: software-triggered strobe
-;        ¦   ¦                    101 = mode 5: hardware-triggered strobe
-;        ¦   L==========>4-5: 30H select read/load sequence:
-;        ¦                        00 = latch counter for stable read
-;        ¦                        01 = read/load most significant byte only
-;        ¦                        10 = read/load least significant byte only
-;        ¦                        11 = read/load LSB then MSB
+;        Â¦   Â¦    Â¦               1=process counts as BCD^
+;        Â¦   Â¦    L=====>1-3: 0eH select timer mode:
+;        Â¦   Â¦                    000 = mode 0: interrupt on terminal count
+;        Â¦   Â¦                    001 = mode 1: programmable one-shot
+;        Â¦   Â¦                    x10 = mode 2: rate generator
+;        Â¦   Â¦                    x11 = mode 3: square-wave rate generator
+;        Â¦   Â¦                    100 = mode 4: software-triggered strobe
+;        Â¦   Â¦                    101 = mode 5: hardware-triggered strobe
+;        Â¦   L==========>4-5: 30H select read/load sequence:
+;        Â¦                        00 = latch counter for stable read
+;        Â¦                        01 = read/load most significant byte only
+;        Â¦                        10 = read/load least significant byte only
+;        Â¦                        11 = read/load LSB then MSB
 ;        L==============>6-7: c0H specify counter to affect:
 ;                                 00 = counter 0, 01= counter 1
 ;                                 10 = counter 2, 11= counter 3
