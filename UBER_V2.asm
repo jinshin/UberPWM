@@ -7,26 +7,40 @@ int08_offset	equ 08h*4
 old08		dw 0,0
 
 int08_handler:
-                ;4Bh    01001011
-		;Connect speaker to channel 2
-                mov     al,cl
-                out     61h,al         
-                dec     al
-		;Disconnect from channel 2
-                out     61h,al
 
-		;load value increase pointer, decrease counter
+;4Bh    01001011
+;Connect speaker to channel 2
+;It sets it to High or Low depending of channel state
+                mov     al,cl
+                out     61h,al
+;Disconnect from channel 2         
+;ChatGPT says it will stay in state of channel 2
+                dec     al		
+		out     61h,al
+
+;load value, increase pointer, decrease counter
                 mov	al,[bx]
 
 		inc	bx
 		dec	bp
                 jz      short terminate
 
-	        ;out     41h,ax
+;original code: out     41h,ax
+;this translated to out 41h,al; mov al,ah; out 42h,al
+;Three commands in one
 
+
+;Mode 1: Programmable One-Shot
+;Mode 1 operates as a square wave generator.
+;The timer counts down from the initial count value to zero, then toggles its output state
+;and automatically reloads the count value for the next cycle.
+
+;Load MSB value to channel 2 counter
+;Generate a Low for duration, then stay High until reloaded
+;at this time, Channel 2 is not connected to speaker
 		out	42h,al
-		mov	al,ch
 
+		mov	al,ch
 		;Signal EOI		
                 out     20h,al
 		;avoid stack overflow
@@ -106,9 +120,10 @@ start:
 		;Counter
 		mov     bp,offset waveend - offset wavestart
 
-		mov	al,36h ;Set timer channel 0,Square wave,LSB and MSB
-		;Chann  Seq     Mode    Bin/BCD
-		;00	11	011	0
+		mov	al,36h
+;Set timer channel 0,Square wave,LSB and MSB
+;Chann  Seq     Mode    Bin/BCD
+;00	11	011	0
 		out	43h,al
 
 ;Set channel 0 to 18356Hz
@@ -119,8 +134,12 @@ start:
 		mov	al,ah
 		out	40h,al
 
-; Channel 2, MSB only, One-shot
-; One-shot means int will trigger irq once
+;Mode 1: Programmable One-Shot
+;Mode 1 operates as a square wave generator.
+;The timer counts down from the initial count value to zero, then toggles its output state to High
+
+;Channel 2, MSB only, Square Wave One-Shot
+
 		mov	al,92h
 		;10 01 001 0
 		out	43h,al
@@ -155,26 +174,3 @@ wavestart:
 waveend:
 
 		end begin	
-
-
-;43H  Write: set channel's mode of operation
-;      ã7T6T5T4T3T2T1T0¬
-;      ¦ch#¦r/l¦mode ¦ ¦
-;      L-+-+-+-+-+-+-+T- bits mask
-;       LT- LT- L-T-- L=>  0: 01H 0=process count as binary
-;        ¦   ¦    ¦               1=process counts as BCD^
-;        ¦   ¦    L=====>1-3: 0eH select timer mode:
-;        ¦   ¦                    000 = mode 0: interrupt on terminal count
-;        ¦   ¦                    001 = mode 1: programmable one-shot
-;        ¦   ¦                    x10 = mode 2: rate generator
-;        ¦   ¦                    x11 = mode 3: square-wave rate generator
-;        ¦   ¦                    100 = mode 4: software-triggered strobe
-;        ¦   ¦                    101 = mode 5: hardware-triggered strobe
-;        ¦   L==========>4-5: 30H select read/load sequence:
-;        ¦                        00 = latch counter for stable read
-;        ¦                        01 = read/load most significant byte only
-;        ¦                        10 = read/load least significant byte only
-;        ¦                        11 = read/load LSB then MSB
-;        L==============>6-7: c0H specify counter to affect:
-;                                 00 = counter 0, 01= counter 1
-;                                 10 = counter 2, 11= counter 3
